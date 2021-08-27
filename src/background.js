@@ -1,10 +1,20 @@
 'use strict'
 
-import { app, protocol, BrowserWindow } from 'electron'
+import { app, protocol, BrowserWindow ,ipcMain} from 'electron'
 import { createProtocol } from 'vue-cli-plugin-electron-builder/lib'
 import installExtension, { VUEJS_DEVTOOLS } from 'electron-devtools-installer'
 const isDevelopment = process.env.NODE_ENV !== 'production'
+const path = require('path')
+const fs = require('fs')
+const compressing=require('compressing')
+const child_process = require('child_process')
 
+/*const  appPath="D:/temp/"
+const  srcPath="D:/Proj/"*/
+const  appPath="/home/temp/"
+const  srcPath="/home/Proj/"
+//const appPath=app.getAppPath();
+//const preload=path.join(appPath, 'preload.js')
 // Scheme must be registered before the app is ready
 protocol.registerSchemesAsPrivileged([
   { scheme: 'app', privileges: { secure: true, standard: true } }
@@ -15,18 +25,21 @@ async function createWindow() {
   const win = new BrowserWindow({
     width: 1200,
     height: 800,
+    fullscreen: true,
     //去掉标题
     //frame:false,
     //默认占满全屏
     //fullscreen: true,
     webPreferences: {
-      
+      //preload,
       // Use pluginOptions.nodeIntegration, leave this alone
       // See nklayman.github.io/vue-cli-plugin-electron-builder/guide/security.html#node-integration for more info
-      nodeIntegration: process.env.ELECTRON_NODE_INTEGRATION,
+      //nodeIntegration: process.env.ELECTRON_NODE_INTEGRATION,
+      nodeIntegration: true,
       contextIsolation: !process.env.ELECTRON_NODE_INTEGRATION,
       webSecurity:false
     }
+
   })
 
   if (process.env.WEBPACK_DEV_SERVER_URL) {
@@ -43,12 +56,74 @@ async function createWindow() {
     // Load the index.html when not in development
     win.loadURL('app://./index.html')
   }
+//下载路径
+  win.webContents.session.on('will-download', (event, item, webContents) => {
+    let filePath = path.join(appPath, item.getFilename());
+    if(item.getFilename()=='login bad'){
+      win.webContents.send('loginBad', 'login bad');
+      filePath=appPath;
+    }
+    if(item.getFilename()=='File not found'){
+        win.webContents.send('badFile', 'File not found');
+      filePath=appPath;
+    }
+      item.setSavePath(filePath);
+      console.log("file",filePath);
+
+    item.once('done', (event, state) => {
+      if (state === 'completed') {
+        //这里是主战场,解压文件
+        if(item.getFilename().lastIndexOf(".zip")>0){
+          compressing.zip.uncompress(filePath, filePath.replace(".zip",""))
+              .then(() => {
+                console.log('success');
+              })
+              .catch(err => {
+                console.error(err);
+              })
+
+        }else if(item.getFilename().lastIndexOf(".exe")>0){
+          //执行exe文件，传入路径
+          child_process.execFile(filePath);
+
+        }
+      } else if (state=="cancelled") {
+        //...
+      }else{
+        //...
+      }
+    })
+  })
+
+  ipcMain.on("sendMessage",(event,data) => {
+    const path=srcPath;
+    let readDir=fs.readdirSync(path);
+    event.sender.send(data, readDir);
+
+  })
+
+
+
+  ipcMain.on("openApp",(event,data) => {
+    const path02=srcPath;
+    let appPath02=path.join(path02, data);
+    appPath02=path.join(appPath02, data+".exe");
+    console.log('appPath',appPath02);
+    //执行exe文件，传入路径
+    child_process.execFile(appPath02);
+  })
+
+  ipcMain.on("searchChannel",(event,data) => {
+    event.sender.send(data.channelName, data.value);
+  });
+
 }
+
+
+
 
 // Quit when all windows are closed.
 app.on('window-all-closed', () => {
-  // On macOS it is common for applications and their menu bar
-  // to stay active until the user quits explicitly with Cmd + Q
   if (process.platform !== 'darwin') {
     app.quit()
   }
@@ -74,6 +149,14 @@ app.on('ready', async () => {
   }
   createWindow()
 })
+//开机自启配置
+const ex = process.execPath
+app.setLoginItemSettings({
+  openAtLogin: true,
+  path: ex,
+  args: [],
+})
+
 
 // Exit cleanly on request from parent process in development mode.
 if (isDevelopment) {

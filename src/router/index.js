@@ -5,7 +5,7 @@ Vue.use(VueRouter)
 
 const routes = [
   {
-    path: '/',
+    path: '/layout',
     name: 'layout',
     component: () => import('../views/Layout.vue'),
     //定义嵌套路由
@@ -24,8 +24,22 @@ const routes = [
         path: '/threeFish',
         name: '测试3',
         component: () => import('../views/threeFish/index.vue'),
+      },{
+        path: '/fourFish',
+        name: '测试4',
+        component: () => import('../views/fourFish/index.vue'),
+      },{
+        path: '/fiveFish',
+        name: '测试5',
+        component: () => import('../views/fiveFish/index.vue'),
       },
+
     ]
+  },
+  {
+    path: '/',
+    name: 'login',
+    component: () => import('../views/sixFish/login.vue'),
   },
   {
     path: '*',
@@ -39,4 +53,8 @@ const router = new VueRouter({
   routes
 })
 
+
+
+
 export default router
+

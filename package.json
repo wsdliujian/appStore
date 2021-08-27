@@ -1,7 +1,7 @@
 {
-  "name": "my-vue-proj",
-  "version": "0.1.0",
-  "author": "liujian <212839876@qq.com>",
+  "name": "AppStore",
+  "version": "0.2.0",
+  "author": "xiongke <534615035@qq.com>",
   "license": null,
   "private": true,
   "scripts": {
@@ -17,12 +17,14 @@
   "main": "background.js",
   "dependencies": {
     "@jiaminghi/data-view": "^2.10.0",
-    "ant-design-vue": "^1.7.6",
+    "ant-design-vue": "^1.7.7",
     "axios": "^0.21.1",
+    "compressing": "^1.5.1",
     "core-js": "^3.6.5",
     "echarts": "^5.1.2",
+    "element-ui": "^2.15.5",
     "vue": "^2.6.11",
-    "vue-router": "^3.2.0"
+    "vue-router": "^3.5.2"
   },
   "devDependencies": {
     "@vue/cli-plugin-babel": "~4.5.0",

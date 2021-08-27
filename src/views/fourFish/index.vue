@@ -322,9 +322,9 @@
 </template>
 
 <script>
-    import MyComm from "../common.js";
+    import MyComm from "../common";
+const systemName=MyComm.getSystem();
     const ipc = require('electron').ipcRenderer;
-    const systemName=MyComm.getSystem();
     export default {
         name: 'fourFish',
 
@@ -334,10 +334,9 @@
                 current: 1,
                 totalPages: 10,
                 data: {},
-                pageSize: 16,
-                searchStr:'',
-                totalData:{},
-                dataLength:0
+                pageSize: "16",
+                searchStr:''
+
             };
         },
         methods: {
@@ -360,22 +359,25 @@
                        // console.log("assss", navigator.platform)
 
                         const status = that.data['fileResponse' + num].loadStatus;
+
                         if (status == '无效') {
                             that.$message.error('下载路径错误！');
                             return;
                         }
+
                         if (status !== '打开') {
+
                             const elink = document.createElement("a")
                             elink.href = val+"?token="+localStorage.getItem("tokenlo");
                             elink.click();
-
                             that.data['fileResponse' + num].loadStatus = '打开';
                         } else {
-                            val = val.substring(val.lastIndexOf("/") + 1, val.lastIndexOf("."));
-                            val=decodeURI(val);
-                            val=val.split("Setup")[0].trim();
+                            val = val.substring(val.lastIndexOf("/") + 1, val.lastIndexOf("."))
+                            val=decodeURI(val)
+                            val=val.split("Setup")[0].trim()
                             ipc.send("openApp", val);
                         }
+
                         ipc.once('badFile', function () {
                             that.$message.error('下载路径错误！');
                             that.data['fileResponse' + num].loadStatus = '无效';
@@ -395,30 +397,9 @@
             },
 
             pageJump: async function () {
-               let length03 = Object.keys(this.totalData).length;
-
-                    this.data={};
-                    let num=this.current-1;
-                    num=(num*this.pageSize)+1;
-                    let totalNum=this.current*this.pageSize;
-                    let index=0;
-                    if(totalNum>length03){
-                        for(let s=num;s<=length03;s++){
-                            index++;
-                            this.data['fileResponse' + index]=  this.totalData['fileResponse' + s];
-                        }
-
-                    }else{
-                        for(let k=num;k<=totalNum;k++){
-                            index++;
-                            this.data['fileResponse' + index]=  this.totalData['fileResponse' + k];
-                        }
-                    }
-                    this.changeBacground(Object.keys(this.data).length);
-            },
-            initDta: async function () {
                 let that = this;
-               let res = await this.$axios.get(MyComm.getUrl()+"/checkFile?search=" + this.searchStr+"&systemName="+systemName);
+                let res = await this.$axios.get(MyComm.getUrl()+"/initData?pageFood=" + this.pageSize + "&pageHeard=" + this.current+'&searchStr='+this.searchStr+"&systemName="+systemName);
+               // console.log("res",res);
                 if(res.data.state==='false'){
                     this.$message.warning(res.data.meg);
                     setTimeout(function () {
@@ -426,102 +407,98 @@
                     },2000);
                     return ;
                 }
+                let blockArr = document.getElementsByClassName('block20');
                 if (res.data.code == 200) {
-                    this.data = res.data.datas;
-                }
-                let length = Object.keys(this.data).length;
-                let initData=[];
-                if(length>0){
-                       ipc.send("sendMessage", "asynchronous");
-                     ipc.once('asynchronous', function (event, arg) {    // 接收异步消息
-                        if (arg != null && arg.length > 0) {
-                        for (let i = 0; i < length; i++) {
-                                for (let f = 0; f < arg.length; f++) {
-                                    if(that.data[i]!=null){
-                                        let url = that.data[i].fileDownloadUri;
 
+                    this.data = res.data.fileStoreMap;
+                    let length = Object.keys(this.data).length;
+
+                    ipc.send("sendMessage", "asynchronous-reply");
+                    ipc.once('asynchronous-reply', function (event, arg) {    // 接收异步消息
+                        for (let i = 1; i <= length; i++) {
+                            if (arg != null && arg.length > 0) {
+                                for (let f = 0; f < arg.length; f++) {
+                                    if(that.data['fileResponse' + i]!=null){
+                                        let url = that.data['fileResponse' + i].fileDownloadUri;
                                         if (url != null && url.trim().length > 0) {
                                             url = decodeURI(url);
                                             url = url.substring(url.lastIndexOf("/") + 1,url.lastIndexOf("."));
-                                            if (url == arg[f]) {
+                                           // console.log("url", url);
 
+                                            if (url == arg[f]) {
+                                               // console.log("dk",url)
+                                                that.data['fileResponse' + i].loadStatus = "打开";
                                                 break;
                                             } else {
                                                 url = url.split("_")[0];
                                                 if (arg[f].split("_")[0] == url) {
-                                                    that.data[i].loadStatus = "更新";
-                                                    initData.push(that.data[i]);
+                                                    that.data['fileResponse' + i].loadStatus = "更新";
                                                     break;
                                                 }
                                             }
                                         }
                                     }
+
+
                                 }
                             }
-                       }
-                         that.data={};
-                         that.totalData={};
-                         for(let m=0;m<initData.length;m++){
+                        }
 
-                             that.totalData['fileResponse' + (m+1)]=initData[m];
-
-                         }
-                         length = initData.length;
-
-                         if(length<=0){
-                             length=0;
-                             this.totalPages = 1;
-                         }else {
-                             let num= Math.ceil(length/that.pageSize);
-                             let n= Math.floor(length/that.pageSize);
-
-                             that.totalPages=num*10;
-                             if(n>0){
-                                 length=  that.pageSize;
-                                 for(let k=1;k<=length;k++){
-                                     that.data['fileResponse' + k]=  that.totalData['fileResponse' + k];
-                                 }
-                             }else {
-                                 that.data=that.totalData;
-
-                             }
-                         }
-                         that.changeBacground(length);
-                     });
-
-
-
-                }
-
-
-
-            },
-            changeBacground(length){
-                let blockArr = document.getElementsByClassName('block20');
-                for (let i = 0; i < length; i++) {
-                    blockArr[i].style.backgroundColor = "rgba(216, 216, 216, 1)";
-                }
-                if (length < blockArr.length) {
-                    for (let j = length; j < blockArr.length; j++) {
-                        blockArr[j].style.backgroundColor = "";
+                    });
+                    for (let i = 0; i < length; i++) {
+                        blockArr[i].style.backgroundColor = "rgba(216, 216, 216, 1)";
+                    }
+                    if (length < blockArr.length) {
+                        for (let j = length; j < blockArr.length; j++) {
+                            blockArr[j].style.backgroundColor = "";
+                        }
+                    }
+                }else{
+                    this.data ={};
+                    for (let l = 0; l < blockArr.length; l++) {
+                        blockArr[l].style.backgroundColor = "";
                     }
                 }
+            },
+            initDta: async function () {
+               // console.log("token",localStorage.getItem("tokenlo"))
+                let that=this;
+                let pageNum = await this.$axios.get(MyComm.getUrl()+"/getTotalPage?pageSize=" + this.pageSize+'&searchStr='+this.searchStr);
+                //console.log("pageNum==", pageNum.data)
+                if(pageNum.data.state==='false'){
+                    this.$message.warning(pageNum.data.meg);
+                    setTimeout(function () {
+                        that.$router.push({path:"/"});
+                    },2000);
+                    return ;
+                }
+
+                if (pageNum.data == null || pageNum.data == 0) {
+                    this.totalPages = 1;
+                } else {
+                    this.totalPages = pageNum.data * 10;
+                }
+
+
+                this.pageJump();
+
             }
 
         },
         mounted() {
-
             this.initDta();
 
 
             },
-        created() {
-            let that=this;
-            ipc.on('fiveFish', function (event, arg) {
-                that.searchStr=arg;
-                that.initDta();
-            });
-        }
+created() {
+    let that=this;
+    ipc.on('fourFish', function (event, arg) {
+        //console.log('sssss',arg)
+        that.searchStr=arg;
+        that.initDta();
+    });
+
+}
 
     }
 </script>

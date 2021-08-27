@@ -380,14 +380,12 @@
                             that.$message.error('下载路径错误！');
                             that.data['fileResponse' + num].loadStatus = '无效';
                         });
-
                         ipc.once('loginBad', function () {
                             that.$message.warning('登录失效，请重新登录！');
                             setTimeout(function () {
                                 that.$router.push({path:"/"});
                             },2000);
                         });
-
                     },
                     oncancel() {
                     }
@@ -444,7 +442,8 @@
                                             url = decodeURI(url);
                                             url = url.substring(url.lastIndexOf("/") + 1,url.lastIndexOf("."));
                                             if (url == arg[f]) {
-
+                                                that.data[i].loadStatus = "打开";
+                                                initData.push(that.data[ i]);
                                                 break;
                                             } else {
                                                 url = url.split("_")[0];
